@@ -1,6 +1,9 @@
-﻿import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+function getCleanApiUrl() {
+  const raw = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  return raw.trim().replace(/\/+$/, '').replace(/\/api$/, '');
+}
 
 export function useApi(path, options = {}) {
   const { interval = null, immediate = true } = options;
@@ -13,7 +16,9 @@ export function useApi(path, options = {}) {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(`${API_URL}${path}`);
+      const baseUrl = getCleanApiUrl();
+      const cleanPath = path.startsWith('/') ? path : `/${path}`;
+      const res = await fetch(`${baseUrl}${cleanPath}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setData(json.data ?? json);
@@ -40,7 +45,6 @@ export function useTimezone() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const API_URL_LOCAL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
   const lookup = useCallback(async (timezone) => {
     if (!timezone.trim()) return;
@@ -48,7 +52,8 @@ export function useTimezone() {
     setError(null);
     setResult(null);
     try {
-      const res = await fetch(`${API_URL_LOCAL}/api/datetime/timezone/${encodeURIComponent(timezone.trim())}`);
+      const baseUrl = getCleanApiUrl();
+      const res = await fetch(`${baseUrl}/api/datetime/timezone/${encodeURIComponent(timezone.trim())}`);
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || 'Fuso inválido');
       setResult(json.data);
@@ -57,7 +62,7 @@ export function useTimezone() {
     } finally {
       setLoading(false);
     }
-  }, [API_URL_LOCAL]);
+  }, []);
 
   return { tz, setTz, result, loading, error, lookup };
 }
